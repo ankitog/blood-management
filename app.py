@@ -2,7 +2,7 @@ import streamlit as st
 import utility as util
 import configuration as config
 
-st.title("BILL MANAGEMENT DASHBOARD")
+st.title("BLOOD MANAGEMENT DASHBOARD")
 
 
 
