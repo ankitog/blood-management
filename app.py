@@ -1,6 +1,7 @@
 import streamlit as st
 import utility as util
 import configuration as config
+import pandas
 
 st.title("BLOOD MANAGEMENT DASHBOARD")
 
@@ -23,6 +24,7 @@ def login():
                     st.session_state["is_already_logged_in"] = is_already_logged_in
                     st.session_state["user_type"] = user_type
                     st.session_state["user_name"] = str(result[0][1])
+                    st.session_state["user_id"] = str(result[0][0])
                     st.experimental_rerun()
 
                 else:
@@ -36,6 +38,8 @@ def login():
                     st.session_state["is_already_logged_in"] = True
                     st.session_state["user_type"] = user_type
                     st.session_state["user_name"] = str(result[0][1])
+                    
+                    st.session_state["user_blood_bank_id"] = str(result[0][7])
                     st.experimental_rerun()
 
                 else:
@@ -48,9 +52,10 @@ def login():
                 if str(user_pass) == str(result[0][6]):
                     st.success("Successful")
                     already_logged_in = True
-                    st.session_state["is_already_logged_in"] = is_already_logged_in
+                    st.session_state["is_already_logged_in"] = True
                     st.session_state["user_type"] = user_type
                     st.session_state["user_name"] = str(result[0][1])
+                    st.session_state["user_id"] = str(result[0][0])
                     st.experimental_rerun()
 
                 else:
@@ -61,7 +66,7 @@ def add_donation():
     with st.form("add_donation_form",clear_on_submit=True):
         st.header("Add donation")
         donor_id = st.text_input("Donor id")
-        bb_id = st.text_input("Blood bank id")
+        bb_id = st.session_state["user_blood_bank_id"]
         b_id = st.text_input("Blood id")
         units = st.number_input("Units", 1, 20)
         add_donation_button = st.form_submit_button("Add")
@@ -80,8 +85,8 @@ def check_blood_stock():
         rh_factor = st.selectbox("RH Factor", ["positive", "negative"])
         search_stock = st.form_submit_button("Search")
         if search_stock:
-            result = util.get_query_result(config.CHECK_STOCK_LEVEL.format(blood_group, rh_factor))
-            st.write(result)
+            result = util.get_sql_result_df(config.CHECK_STOCK_LEVEL.format(blood_group, rh_factor))
+            st.table(result)
 
 
 ################# HOSPITAL FUNCTION ####################
@@ -108,8 +113,26 @@ def track_order():
         o_id = st.text_input("Order Id")
         check_order_id = st.form_submit_button("Check")
         if check_order_id:
-            result = util.get_query_result(config.CHECK_ORDER_STATUS.format(o_id))
-            st.write(result)
+            result = util.get_sql_result_df(config.CHECK_ORDER_STATUS.format(o_id))
+            st.table(result)
+
+
+####################### DONOR SECTION ########################
+def view_last_donation():
+    
+    result = util.get_sql_result_df(config.VIEW_LAST_DONATIONS.format(st.session_state["user_id"]))
+    st.table(result)
+
+def show_notification():
+    result = util.get_query_result(config.SHOW_NOTIFICATION.format(st.session_state["user_id"]))
+    # st.write(result)
+    return True if result[0][0] > 1 else False
+
+def view_event():
+    
+    result = util.get_sql_result_df(config.VIEW_EVENT.format(st.session_state["user_id"]))
+    st.table(result)
+
 
 if __name__ == '__main__':
     if 'is_already_logged_in' in st.session_state:
@@ -152,15 +175,34 @@ if __name__ == '__main__':
             # st.session_state["add_donations_action"] = False
             track_order()
 
+    if st.session_state.get("user_type") == "Donor":
+        with st.sidebar:
+            st.write(f"Welcome {st.session_state['user_name']}")
+            #emploee_log_out = st.button("Log out")
+            view_last_donations = st.button("View last 5 donations")
+            view_events = st.button("View Events")
+            # temp = show_notification()
+            # st.write(temp)
+            # update_donor_details =  st.button("Update donor details")
+            if show_notification():
+                st.write("Low Blood Stock! Please Donate")
+                
+            
 
-# if st.session_state.get("user_type") == "Hospital":
-#     with st.sidebar:
-#         st.write(f"Welcome {st.session_state['user_name']}")
-#         hospital_log_out = st.button("Log out")
-#         create_order = st.button("Create  Order")
-#         show_order_detail = st.button("Show order detail")
+        if view_last_donations:
+            # st.session_state["create_order_action"] = True
+            # st.session_state["blood_stock_button_action"]=False
+            view_last_donation()
 
-#         if hospital_log_out:
-#             pass
+        if view_events:
+            # st.session_state["create_order_action"] = True
+            # st.session_state["blood_stock_button_action"]=False
+            view_event()
+
+        # if track_order_btn or st.session_state.get("track_order_action"):
+        #     st.session_state["track_order_action"] = True
+        #     # st.session_state["add_donations_action"] = False
+        #     track_order()
+
 
 
